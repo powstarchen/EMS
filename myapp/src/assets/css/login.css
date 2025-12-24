@@ -1,0 +1,85 @@
+*{
+    padding: 0;
+    margin: 0;
+}
+ul li {
+    list-style: none;
+}
+a {
+    text-decoration: none;
+    color: #333;
+}
+body {
+    font-size: 14px;
+    font-family: "Microsoft YaHei", sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.container {
+    margin: 0;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    align-items: center;
+}
+.card {
+    width: 300px;
+    height: 200px;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.card:hover {
+    transform: translateY(-6px);
+    border-radius: 5px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+}
+/* 左右模块颜色 */
+.card1 { background: linear-gradient(to right, #009687ec, #00bfa5f6); }
+.card2 { background: linear-gradient(to right, #0288d1ec, #26c6daf6); }
+.card4 { background: linear-gradient(to right, #673ab7ec, #9575cdf6); }
+.card5 { background: linear-gradient(to right, #f8885fec, #d34b28f6); }
+
+.login {
+    width: 100%;
+    height: 100vh;
+    /* background: url(../images/ems_bg.png) no-repeat;
+    background-size: cover; */
+}
+.login-card {
+    /* background-color: #fff;
+    width: 45vh;
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: 0 3px 2px 2px rgba(0, 0, 0, .3);
+    position: relative;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%); */
+    background: linear-gradient(to bottom, #2196f3ec, #1976d2f6);
+    width: 60vh;
+    height: 30vh;
+    padding: 10px;
+    color: #000;
+    border-radius: 5px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    text-align: center;
+}
+.login .login-title {
+    font-size: 2rem;
+    text-align: center;
+    margin: 20px ;
+}
+.login-button {
+    width: 100px;
+    left: 50%;
+    align-items: center;
+}
