@@ -1,93 +1,99 @@
 <template>
-  <div class = "login">
-    <div class = "container">
-      <div class = "card card1">
-        <i><el-icon><Monitor /></el-icon></i>
-        <p>Energy Monitoring Platform</p>
-      </div>
-      <div class = "card card2">
-        <i><el-icon><Tools /></el-icon></i>
-        <p>Energy Monitoring Platform</p>
-      </div>
-      <div class = "login-card">
-        <p class = "login-title">Emergy Monitorng Sysytem</p> 
+  <div class="login">
+    <div class="container">
+      <div class="login-card">
+        <p class="login-title">Energy Monitoring System</p>
+
         <el-form
           ref="ruleFormRef"
-                :model="ruleForm"
-                :rules="rules"
-                label-width="auto"
+          :model="ruleForm"
+          :rules="rules"
+          label-width="auto"
+          @submit.prevent
+        >
+          <el-form-item label="User Name" prop="user">
+            <el-input
+              v-model="ruleForm.user"
+              @keyup.enter="submitForm"
+            />
+          </el-form-item>
+
+          <el-form-item label="Password" prop="password">
+            <el-input
+              type="password"
+              v-model="ruleForm.password"
+              @keyup.enter="submitForm"
+            />
+          </el-form-item>
+
+          <el-form-item>
+            <el-button
+              type="success"
+              class="login-button"
+              native-type="button"
+              @click="submitForm"
             >
-                <el-form-item label="User Name" prop="user">
-                    <el-input v-model="ruleForm.user" />
-                </el-form-item>
-                <el-form-item label="Password" prop="password">
-                    <el-input type="password" v-model="ruleForm.password" />
-                </el-form-item>
-                <el-form-item>
-                    <el-button type="success" class = "login-button" @click="submitForm(ruleFormRef)">
-                        Login
-                    </el-button>
-                </el-form-item>
+              Login
+            </el-button>
+          </el-form-item>
         </el-form>
-      </div>
-      <div class = "card card4">
-        <i><el-icon><DataLine /></el-icon></i>
-        <p>Energy Monitoring Platform</p>
-      </div>
-      <div class = "card card5">
-        <i><el-icon><Histogram /></el-icon></i>
-        <p>Energy Monitoring Platform</p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-    import {ref, reactive} from 'vue'
-    import '../../assets/css/login.css'
-    import {
-      Monitor,
-      Tools,
-      Menu,
-      Grid,
-      Histogram,
-      TrendCharts,
-      DataLine
-    } from '@element-plus/icons-vue'
-    import axios from '../../api'
-    import {useRouter} from 'vue-router'
+import { ref, reactive } from 'vue';
+import { useRouter } from 'vue-router';
 
-    const router = useRouter();
-    const ruleFormRef = ref();
-    const ruleForm = reactive ({
-      user: 'admin123',
-      password:'admin123'
-    });
+import { authApi, getCurrentUser } from '../../api';
+import { useAuthStore } from '../../stores/auth';
+import { isViewer } from '../../utils/permission';
 
-    const rules = reactive({
-      user: [
-        { required: true, message: 'Please input User name', trigger: 'blur' },
-        { min: 3, max: 18, message: 'Length should be 3 to 18', trigger: 'blur' },
-      ],
-      password: [
-        { required: true, message: 'Please input password', trigger: 'blur' },
-        { min: 4, max: 10, message: 'Length should be 4 to 10', trigger: 'blur' },
-      ],
-    });
+/* ----------------------
+ * 表单状态（❗之前丢失的部分）
+ * ---------------------- */
+const ruleFormRef = ref(null);
 
-    function submitForm(frmLogin){
-      frmLogin.validate(async valid=> {
-        if(valid){
-          let res = await axios.post('data/login',ruleForm);
-          let {code} = res.data;
-          if(code == 200){
-            router.push('/home');
-          }else{
-            alert('user name or password was wrong ... ');
-          }
-        }else{
-          alert('fail');
-        };
-      })
-    }
+const ruleForm = reactive({
+  user: '',
+  password: ''
+});
+
+const rules = {
+  user: [
+    { required: true, message: 'Please input User name', trigger: 'blur' }
+  ],
+  password: [
+    { required: true, message: 'Please input password', trigger: 'blur' }
+  ]
+};
+
+/* ----------------------
+ * 登录逻辑
+ * ---------------------- */
+const router = useRouter();
+const store = useAuthStore();
+
+async function submitForm() {
+  if (!ruleFormRef.value) return;
+
+  const valid = await ruleFormRef.value.validate().catch(() => false);
+  if (!valid) return;
+
+  const res = await authApi.login(ruleForm.user, ruleForm.password);
+
+  if (res?.access_token?.length > 0) {
+    store.setAuthFromLogin(res);
+
+    const user = store.user;
+    const target = isViewer(user)
+      ? '/tv/dashboard?fullscreen=1'
+      : '/app/dashboard';
+
+    await router.replace(target);
+  }else {
+    alert('user name or password was wrong ...');
+  }
+}
 </script>

@@ -5,7 +5,7 @@ const app = express()
 app.use(cors()).use(express.json()) // 让 express 能解析 JSON 请求体
 
 // 定义一个接口：POST /api/login
-app.post('/data/login', (req, res) => {
+app.post('/api/auth/login', (req, res) => {
   const { user, password } = req.body
 
   if (user === 'admin123' && password === 'admin123') {
