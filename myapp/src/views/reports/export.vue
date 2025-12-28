@@ -1,1 +1,1 @@
-<template><div style="padding:16px;">report.export</div></template>
+<template><div style="padding:16px;">report export</div></template>

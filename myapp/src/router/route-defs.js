@@ -22,6 +22,7 @@ const ReportExport = () => import('../views/reports/export.vue');
 const Users = () => import('../views/users/index.vue');
 const Roles = () => import('../views/users/roles.vue');
 const Permissions = () => import('../views/users/permissions.vue');
+const ChangePassword = () => import('../views/profile/ChangePassword.vue');
 
 // System pages
 const SysConfig = () => import('../views/system/config.vue');
@@ -71,7 +72,13 @@ export const asyncRouteCandidates = [
             name: 'app.ems.devices',
             component: EMSDevices,
             meta: { title: 'Devices', icon: 'Tools', perm: 'ems.read', group: 'MAIN NAVIGATION' }
-          }
+          },
+          {
+          path: 'profile/password',
+          name: 'app.profile.password',
+          component: ChangePassword,
+          meta: { title: 'Change Password', hidden: true }
+        }
         ]
       },
 

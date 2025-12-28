@@ -1,5 +1,6 @@
 <template>
-  <aside class="sidebar">
+  <aside class="sidebar" :class="{ collapsed }">
+    <!-- Brand -->
     <div class="brand">
       <span class="brand-text">EMS</span>
     </div>
@@ -9,38 +10,60 @@
         <template v-for="(item, idx) in menus" :key="idx">
           <!-- Header -->
           <li v-if="item.type === 'header'" class="nav-header">
-            {{ item.title }}
+            <span v-if="!collapsed">{{ item.title }}</span>
+            <span v-else class="dot">•</span>
           </li>
 
           <!-- Tree -->
-          <li v-else-if="item.type === 'tree'" class="nav-item has-tree" :class="{ open: isOpen(item) }">
-            <a class="nav-link" href="javascript:void(0)" @click="toggle(item)">
+          <li
+            v-else-if="item.type === 'tree'"
+            class="nav-item has-tree"
+            :class="{ open: isOpen(item), active: isActiveTree(item) }"
+          >
+            <a
+              href="javascript:;"
+              class="nav-link"
+              :title="collapsed ? item.title : ''"
+              @click="toggleTree(item)"
+            >
               <span class="icon">
-                <component v-if="item.icon" :is="iconMap[item.icon] || DefaultIcon" />
+                <component :is="iconMap[item.icon] || DefaultIcon" />
               </span>
-              <span class="text">{{ item.title }}</span>
-              <span class="arrow">›</span>
+
+              <span v-if="!collapsed" class="text">{{ item.title }}</span>
+
+              <span v-if="!collapsed" class="arrow">›</span>
             </a>
 
-            <ul class="nav nav-tree">
-              <li v-for="(ch, cidx) in item.children" :key="cidx" class="nav-item" :class="{ active: isActive(ch.path) }">
-                <router-link :to="ch.path" class="nav-link sub">
-                  <span class="icon">
-                    <component v-if="ch.icon" :is="iconMap[ch.icon] || DefaultIcon" />
-                  </span>
-                  <span class="text">{{ ch.title }}</span>
+            <ul v-if="!collapsed" class="nav nav-treeview">
+              <li
+                v-for="(c, cidx) in item.children"
+                :key="cidx"
+                class="nav-item"
+                :class="{ active: isActive(c.path) }"
+              >
+                <router-link :to="c.path" class="nav-link">
+                  <span class="icon small">•</span>
+                  <span class="text">{{ c.title }}</span>
                 </router-link>
               </li>
             </ul>
           </li>
 
-          <!-- Normal item -->
-          <li v-else class="nav-item" :class="{ active: isActive(item.path) }">
-            <router-link :to="item.path" class="nav-link">
+          <!-- Item -->
+          <li
+            v-else
+            class="nav-item"
+            :class="{ active: isActive(item.path) }"
+          >
+            <router-link :to="item.path" class="nav-link" :title="collapsed ? item.title : ''">
               <span class="icon">
-                <component v-if="item.icon" :is="iconMap[item.icon] || DefaultIcon" />
+                <component
+                  v-if="item.icon"
+                  :is="iconMap[item.icon] || DefaultIcon"
+                />
               </span>
-              <span class="text">{{ item.title }}</span>
+              <span v-if="!collapsed" class="text">{{ item.title }}</span>
             </router-link>
           </li>
         </template>
@@ -50,81 +73,110 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import { useAuthStore } from '../../../stores/auth';
+
 import { DataLine, Monitor, Histogram, Tools, Grid } from '@element-plus/icons-vue';
 
 const props = defineProps({
-  menus: { type: Array, required: true }
+  menus: { type: Array, required: true },
+  collapsed: { type: Boolean, default: false }
 });
 
 const route = useRoute();
+const store = useAuthStore();
 
 const iconMap = { DataLine, Monitor, Histogram, Tools, Grid };
 const DefaultIcon = DataLine;
 
-// 记录展开的 tree（用 name/path 都行，这里用 path）
-const openMap = ref({});
+// 记录当前展开的 tree：用 title 做 key（简化）
+const openKey = ref('');
+
+// 如果当前路由落在某个 tree 的 child 下，自动展开该 tree（仅在非 collapsed）
+watch(
+  () => route.path,
+  () => {
+    if (props.collapsed) return;
+    const hit = (store.menu || []).find(m =>
+      m.type === 'tree' && (m.children || []).some(c => c.path === route.path)
+    );
+    if (hit) openKey.value = hit.title;
+  },
+  { immediate: true }
+);
 
 function isActive(path) {
   return route.path === path || route.path.startsWith(path + '/');
 }
 
+function isActiveTree(tree) {
+  return (tree.children || []).some(c => isActive(c.path));
+}
+
 function isOpen(tree) {
-  // 1) 手动打开优先
-  if (openMap.value[tree.path]) return true;
-  // 2) 当前路由在该 tree 下则自动展开
-  return route.path.startsWith(tree.path);
+  // active 的 tree 优先展开（非 collapsed）
+  if (props.collapsed) return false;
+  return openKey.value === tree.title || isActiveTree(tree);
 }
 
-function toggle(tree) {
-  openMap.value[tree.path] = !openMap.value[tree.path];
+function toggleTree(tree) {
+  if (props.collapsed) return;
+  openKey.value = openKey.value === tree.title ? '' : tree.title;
 }
-
-// 路由变化时：自动打开当前 tree（让体验像 AdminLTE）
-watch(
-  () => route.path,
-  () => {
-    for (const it of props.menus) {
-      if (it.type === 'tree' && route.path.startsWith(it.path)) {
-        openMap.value[it.path] = true;
-      }
-    }
-  },
-  { immediate: true }
-);
 </script>
 
 <style scoped>
+/* ===== AdminLTE-ish Sidebar ===== */
 .sidebar {
-  width: 260px;
+  width: 240px;
   background-color: #343a40;
   color: #c2c7d0;
   display: flex;
   flex-direction: column;
+  transition: width 0.2s ease;
 }
+
+.sidebar.collapsed {
+  width: 72px;
+}
+
+/* Brand */
 .brand {
   height: 56px;
   display: flex;
   align-items: center;
   padding: 0 16px;
   background-color: #2f343a;
-  font-weight: bold;
   color: #fff;
+  font-weight: 700;
 }
-.brand-text { font-size: 18px; }
 
-.menu { flex: 1; overflow-y: auto; }
+.sidebar.collapsed .brand-text {
+  font-size: 16px;
+}
+
+/* Menu */
+.menu {
+  flex: 1;
+  overflow-y: auto;
+}
+
 .nav { list-style: none; padding: 0; margin: 0; }
 
+/* Header */
 .nav-header {
   padding: 10px 16px;
   font-size: 12px;
   color: #adb5bd;
   text-transform: uppercase;
 }
+.sidebar.collapsed .nav-header { text-align: center; }
+.dot { opacity: .6; }
 
+/* Links */
 .nav-item { display: block; }
+
 .nav-link {
   display: flex;
   align-items: center;
@@ -132,9 +184,35 @@ watch(
   color: #c2c7d0;
   text-decoration: none;
   transition: background 0.2s;
+  user-select: none;
 }
+
 .nav-link:hover { background-color: #495057; color: #fff; }
-.nav-item.active > .nav-link { background-color: #007bff; color: #fff; }
+
+.nav-item.active > .nav-link {
+  background-color: #007bff;
+  color: #fff;
+}
+
+/* Tree styles */
+.has-tree > .nav-link .arrow {
+  margin-left: auto;
+  transform: rotate(0deg);
+  transition: transform .15s ease;
+  opacity: .8;
+}
+.has-tree.open > .nav-link .arrow { transform: rotate(90deg); }
+
+.nav-treeview {
+  list-style: none;
+  padding: 0 0 8px 0;
+  margin: 0;
+}
+
+.nav-treeview .nav-link {
+  padding-left: 28px;
+  font-size: 13px;
+}
 
 .icon {
   width: 20px;
@@ -142,20 +220,7 @@ watch(
   display: flex;
   align-items: center;
 }
+.sidebar.collapsed .icon { margin-right: 0; justify-content: center; width: 100%; }
 .text { flex: 1; }
-
-/* Tree */
-.has-tree > .nav-link { position: relative; }
-.arrow {
-  transform: rotate(0deg);
-  transition: transform 0.2s;
-  opacity: 0.9;
-}
-.has-tree.open .arrow { transform: rotate(90deg); }
-
-.nav-tree {
-  padding-left: 12px;
-  background: rgba(255,255,255,0.03);
-}
-.nav-link.sub { padding-left: 28px; font-size: 13px; }
+.small { width: 20px; margin-right: 10px; opacity: .8; }
 </style>

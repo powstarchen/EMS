@@ -1,15 +1,14 @@
 <template>
-  <div class="al3-wrapper">
-    <aside class="al3-sidebar">
-      <Sidebar :menus="menus" />
-    </aside>
+  <div class="app-wrapper" :class="{ collapsed }">
+    <Sidebar :menus="menus" :collapsed="collapsed" />
 
-    <div class="al3-main">
-      <header class="al3-header">
-        <HeaderBar />
-      </header>
+    <div class="main-container">
+      <HeaderBar
+        :collapsed="collapsed"
+        @toggle-sidebar="toggleSidebar"
+      />
 
-      <main class="al3-content">
+      <main class="content">
         <router-view />
       </main>
     </div>
@@ -19,51 +18,39 @@
 <script setup>
 import { computed } from 'vue';
 import { useAuthStore } from '../../stores/auth';
+import { useUiStore } from '../../stores/ui';
 import Sidebar from './components/Sidebar.vue';
 import HeaderBar from './components/HeaderBar.vue';
 
-const store = useAuthStore();
-const menus = computed(() => store.menu || []);
+const auth = useAuthStore();
+const ui = useUiStore();
+
+const menus = computed(() => auth.menu || []);
+const collapsed = computed(() => ui.sidebarCollapsed);
+
+function toggleSidebar() {
+  ui.toggleSidebar();
+}
 </script>
 
 <style scoped>
-.al3-wrapper {
+.app-wrapper {
   display: flex;
   height: 100vh;
   background: #f4f6f9;
 }
 
-/* AdminLTE 左侧深色侧边栏风格 */
-.al3-sidebar {
-  width: 260px;
-  background: #343a40;
-  color: #c2c7d0;
-  flex-shrink: 0;
-  display: flex;
-}
-
-/* 右侧主体 */
-.al3-main {
+.main-container {
   flex: 1;
-  min-width: 0;
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
-/* 顶部栏 */
-.al3-header {
-  height: 56px;
-  background: #ffffff;
-  border-bottom: 1px solid #dee2e6;
-  display: flex;
-  align-items: center;
-  padding: 0 12px;
-}
-
-/* 内容区 */
-.al3-content {
+.content {
   flex: 1;
-  overflow: auto;
   padding: 16px;
+  overflow: auto;
+  background: #f4f6f9;
 }
 </style>

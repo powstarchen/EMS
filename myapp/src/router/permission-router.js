@@ -40,66 +40,78 @@ export function filterRoutesByUser(user) {
   return top;
 }
 
-/**
- * 生成 AdminLTE 风格菜单（header + tree + item）
- */
+// 由路由生成 AdminLTE 风格菜单（分组 + 树）
 export function buildMenuForUser(user) {
+  const userIsViewer = isViewer(user);
+
+  // 先拿到“该用户可见”的路由（你已有 filterRoutesByUser）
   const addedRoutes = filterRoutesByUser(user);
+
+  // viewer 只走 /tv，不需要 sidebar 菜单
+  if (userIsViewer) return [];
+
   const app = addedRoutes.find(r => r.name === 'app');
-  if (!app || !app.children) return [];
+  if (!app || !Array.isArray(app.children)) return [];
 
-  const headersOrder = ['MAIN NAVIGATION', 'MANAGEMENT', 'REPORTS', 'SYSTEM'];
+  // ✅ 关键：忽略 hidden 的 children（比如 profile/password）
+  const visibleChildren = app.children.filter(ch => !ch.meta?.hidden);
+
+  // 1) 把 children 转成“节点”
+  const nodes = visibleChildren.map(ch => ({
+    type: 'item',
+    name: ch.name,
+    path: `/app/${ch.path}`,
+    title: ch.meta?.title || ch.name,
+    icon: ch.meta?.icon || '',
+    group: ch.meta?.group || 'MAIN NAVIGATION',
+    children: Array.isArray(ch.children)
+      ? ch.children
+          .filter(g => !g.meta?.hidden) // 子菜单也支持 hidden
+          .map(g => ({
+            type: 'item',
+            name: g.name,
+            path: `/app/${ch.path}/${g.path}`,
+            title: g.meta?.title || g.name,
+            icon: g.meta?.icon || '',
+            group: g.meta?.group || (ch.meta?.group || 'MAIN NAVIGATION')
+          }))
+      : []
+  }));
+
+  // 2) 按 group 分组
   const groups = {};
-
-  // 将 app.children 转换成菜单节点
-  for (const ch of app.children) {
-    const group = ch.meta?.group || 'MAIN NAVIGATION';
-    if (!groups[group]) groups[group] = [];
-
-    const base = {
-      title: ch.meta?.title || ch.name,
-      icon: ch.meta?.icon || '',
-      name: ch.name
-    };
-
-    // tree：有 children 的目录节点
-    if (Array.isArray(ch.children) && ch.children.length) {
-      groups[group].push({
-        type: 'tree',
-        ...base,
-        path: `/app/${ch.path}`,
-        children: ch.children.map(k => ({
-          type: 'item',
-          title: k.meta?.title || k.name,
-          icon: k.meta?.icon || '',
-          name: k.name,
-          path: `/app/${ch.path}/${k.path}`
-        }))
-      });
-    } else {
-      // item
-      groups[group].push({
-        type: 'item',
-        ...base,
-        path: `/app/${ch.path}`
-      });
-    }
+  for (const n of nodes) {
+    if (!groups[n.group]) groups[n.group] = [];
+    groups[n.group].push(n);
   }
 
-  // 输出：header + items
+  // 3) 输出分组结构：[{ type:'header', title }, ...items/tree]
+  const order = ['MAIN NAVIGATION', 'MANAGEMENT', 'REPORTS', 'SYSTEM'];
   const out = [];
-  for (const g of headersOrder) {
-    if (!groups[g] || groups[g].length === 0) continue;
-    out.push({ type: 'header', title: g });
-    out.push(...groups[g]);
-  }
 
-  // 未定义组：追加在最后
-  Object.keys(groups).forEach(g => {
-    if (headersOrder.includes(g)) return;
-    out.push({ type: 'header', title: g });
-    out.push(...groups[g]);
+  order.forEach(gname => {
+    if (!groups[gname] || groups[gname].length === 0) return;
+    out.push({ type: 'header', title: gname });
+    out.push(
+      ...groups[gname].map(x => ({
+        ...x,
+        type: x.children.length ? 'tree' : 'item'
+      }))
+    );
+  });
+
+  // 其他未知组最后追加
+  Object.keys(groups).forEach(gname => {
+    if (order.includes(gname)) return;
+    out.push({ type: 'header', title: gname });
+    out.push(
+      ...groups[gname].map(x => ({
+        ...x,
+        type: x.children.length ? 'tree' : 'item'
+      }))
+    );
   });
 
   return out;
 }
+
