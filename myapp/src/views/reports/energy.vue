@@ -1,0 +1,1 @@
+<template><div style="padding:16px;">report.energy</div></template>

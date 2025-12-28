@@ -19,8 +19,8 @@
 <script setup>
 import { computed } from 'vue';
 import { useAuthStore } from '../../stores/auth';
-import Sidebar from '../components/Sidebar.vue';
-import HeaderBar from '../components/HeaderBar.vue';
+import Sidebar from './components/Sidebar.vue';
+import HeaderBar from './components/HeaderBar.vue';
 
 const store = useAuthStore();
 const menus = computed(() => store.menu || []);

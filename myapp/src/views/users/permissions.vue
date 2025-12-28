@@ -1,0 +1,1 @@
+<template><div style="padding:16px;">user.permissions</div></template>

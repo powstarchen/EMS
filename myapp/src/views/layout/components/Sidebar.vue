@@ -1,10 +1,8 @@
 <template>
   <aside class="sidebar">
-    
     <div class="brand">
       <span class="brand-text">EMS</span>
     </div>
-
 
     <nav class="menu">
       <ul class="nav">
@@ -24,16 +22,13 @@
               <span class="arrow">›</span>
             </a>
 
-            <ul class="nav nav-tree" v-show="isOpen(item)">
-              <li
-                v-for="child in item.children"
-                :key="child.name"
-                class="nav-item"
-                :class="{ active: isActive(child.path) }"
-              >
-                <router-link :to="child.path" class="nav-link child-link">
-                  <span class="dot">•</span>
-                  <span class="text">{{ child.title }}</span>
+            <ul class="nav nav-tree">
+              <li v-for="(ch, cidx) in item.children" :key="cidx" class="nav-item" :class="{ active: isActive(ch.path) }">
+                <router-link :to="ch.path" class="nav-link sub">
+                  <span class="icon">
+                    <component v-if="ch.icon" :is="iconMap[ch.icon] || DefaultIcon" />
+                  </span>
+                  <span class="text">{{ ch.title }}</span>
                 </router-link>
               </li>
             </ul>
@@ -55,7 +50,7 @@
 </template>
 
 <script setup>
-import { reactive, watchEffect } from 'vue';
+import { ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { DataLine, Monitor, Histogram, Tools, Grid } from '@element-plus/icons-vue';
 
@@ -68,46 +63,46 @@ const route = useRoute();
 const iconMap = { DataLine, Monitor, Histogram, Tools, Grid };
 const DefaultIcon = DataLine;
 
-// tree open 状态
-const openMap = reactive({}); // { [name]: true/false }
+// 记录展开的 tree（用 name/path 都行，这里用 path）
+const openMap = ref({});
 
 function isActive(path) {
   return route.path === path || route.path.startsWith(path + '/');
 }
 
-function isOpen(item) {
-  // 如果当前路由在 tree 内，自动展开
-  if (openMap[item.name] === undefined) {
-    return item.children?.some(c => isActive(c.path));
-  }
-  return openMap[item.name];
+function isOpen(tree) {
+  // 1) 手动打开优先
+  if (openMap.value[tree.path]) return true;
+  // 2) 当前路由在该 tree 下则自动展开
+  return route.path.startsWith(tree.path);
 }
 
-function toggle(item) {
-  openMap[item.name] = !isOpen(item);
+function toggle(tree) {
+  openMap.value[tree.path] = !openMap.value[tree.path];
 }
 
-// 路由变化时：让包含当前路由的 tree 自动展开
-watchEffect(() => {
-  (props.menus || []).forEach(m => {
-    if (m.type === 'tree' && m.children?.some(c => isActive(c.path))) {
-      openMap[m.name] = true;
+// 路由变化时：自动打开当前 tree（让体验像 AdminLTE）
+watch(
+  () => route.path,
+  () => {
+    for (const it of props.menus) {
+      if (it.type === 'tree' && route.path.startsWith(it.path)) {
+        openMap.value[it.path] = true;
+      }
     }
-  });
-});
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>
-
 .sidebar {
-  width: 240px;
+  width: 260px;
   background-color: #343a40;
   color: #c2c7d0;
   display: flex;
   flex-direction: column;
 }
-
-
 .brand {
   height: 56px;
   display: flex;
@@ -117,12 +112,10 @@ watchEffect(() => {
   font-weight: bold;
   color: #fff;
 }
-
 .brand-text { font-size: 18px; }
 
 .menu { flex: 1; overflow-y: auto; }
 .nav { list-style: none; padding: 0; margin: 0; }
-
 
 .nav-header {
   padding: 10px 16px;
@@ -132,7 +125,6 @@ watchEffect(() => {
 }
 
 .nav-item { display: block; }
-
 .nav-link {
   display: flex;
   align-items: center;
@@ -141,10 +133,8 @@ watchEffect(() => {
   text-decoration: none;
   transition: background 0.2s;
 }
-
 .nav-link:hover { background-color: #495057; color: #fff; }
 .nav-item.active > .nav-link { background-color: #007bff; color: #fff; }
-
 
 .icon {
   width: 20px;
@@ -152,23 +142,20 @@ watchEffect(() => {
   display: flex;
   align-items: center;
 }
-
 .text { flex: 1; }
 
 /* Tree */
 .has-tree > .nav-link { position: relative; }
 .arrow {
   transform: rotate(0deg);
-  transition: transform .2s;
-  opacity: .8;
+  transition: transform 0.2s;
+  opacity: 0.9;
 }
 .has-tree.open .arrow { transform: rotate(90deg); }
 
 .nav-tree {
-  padding-left: 18px;
+  padding-left: 12px;
   background: rgba(255,255,255,0.03);
 }
-
-.child-link { padding: 8px 16px; }
-.dot { width: 14px; display: inline-block; opacity: .8; }
+.nav-link.sub { padding-left: 28px; font-size: 13px; }
 </style>
