@@ -19,13 +19,14 @@
 import { computed } from 'vue';
 import { useAuthStore } from '../../stores/auth';
 import { useUiStore } from '../../stores/ui';
-import Sidebar from './components/Sidebar.vue';
-import HeaderBar from './components/HeaderBar.vue';
+import Sidebar from './components/sidebar.vue';
+import HeaderBar from './components/headerBar.vue';
 
 const auth = useAuthStore();
 const ui = useUiStore();
 
 const menus = computed(() => auth.menu || []);
+console.log('DEBUG MENUS:', menus.value);
 const collapsed = computed(() => ui.sidebarCollapsed);
 
 function toggleSidebar() {

@@ -1,0 +1,209 @@
+[
+    {
+        "id": "tab_api",
+        "type": "tab",
+        "label": "API Examples",
+        "disabled": false,
+        "info": "Example APIs protected by JWT middleware"
+    },
+    {
+        "id": "api_test_in",
+        "type": "http in",
+        "z": "tab_api",
+        "name": "GET /api/test (protected)",
+        "url": "/api/test",
+        "method": "get",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 130,
+        "y": 40,
+        "wires": [
+            [
+                "api_set_perm_read"
+            ]
+        ]
+    },
+    {
+        "id": "api_set_perm_read",
+        "type": "function",
+        "z": "tab_api",
+        "name": "Set requiredPermission = ems.read",
+        "func": "// Require 'ems.read' permission for this endpoint\nmsg.requiredPermission = 'ems.read';\nreturn msg;",
+        "outputs": 1,
+        "x": 200,
+        "y": 100,
+        "wires": [
+            [
+                "mw_link_call"
+            ]
+        ]
+    },
+    {
+        "id": "mw_link_call",
+        "type": "link call",
+        "z": "tab_api",
+        "name": "Call JWT Middleware",
+        "links": [
+            "mw_link_in"
+        ],
+        "linkType": "static",
+        "timeout": "30",
+        "x": 520,
+        "y": 100,
+        "wires": [
+            [
+                "api_test_ok"
+            ]
+        ]
+    },
+    {
+        "id": "api_test_ok",
+        "type": "function",
+        "z": "tab_api",
+        "name": "OK -> return user/permissions",
+        "func": "msg.statusCode = 200;\nmsg.payload = {\n  ok: true,\n  userId: msg.userId,\n  user: msg.user,\n  permissions: msg.permissions\n};\nreturn msg;",
+        "outputs": 1,
+        "x": 810,
+        "y": 100,
+        "wires": [
+            [
+                "api_http_resp"
+            ]
+        ]
+    },
+    {
+        "id": "api_http_resp",
+        "type": "http response",
+        "z": "tab_api",
+        "name": "HTTP Response",
+        "x": 1100,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "api_dpm_in",
+        "type": "http in",
+        "z": "tab_api",
+        "name": "GET /api/ems/dpm/latest (protected)",
+        "url": "/api/ems/dpm/latest",
+        "method": "get",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 170,
+        "y": 180,
+        "wires": [
+            [
+                "api_dpm_set_perm"
+            ]
+        ]
+    },
+    {
+        "id": "api_dpm_set_perm",
+        "type": "function",
+        "z": "tab_api",
+        "name": "Set requiredPermission = ems.read",
+        "func": "msg.requiredPermission = 'ems.read';\nreturn msg;",
+        "outputs": 1,
+        "x": 200,
+        "y": 260,
+        "wires": [
+            [
+                "mw_link_call_dpm"
+            ]
+        ]
+    },
+    {
+        "id": "mw_link_call_dpm",
+        "type": "link call",
+        "z": "tab_api",
+        "name": "Call JWT Middleware",
+        "links": [
+            "mw_link_in"
+        ],
+        "linkType": "static",
+        "timeout": "30",
+        "x": 520,
+        "y": 260,
+        "wires": [
+            [
+                "api_dpm_sql"
+            ]
+        ]
+    },
+    {
+        "id": "api_dpm_sql",
+        "type": "function",
+        "z": "tab_api",
+        "name": "Build SQL: dpm_real_data_latest 20 rows",
+        "func": "// Example: return latest 20 rows from DPM_real_data\n// Adjust table/fields as needed.\n\nmsg.topic = `\n  SELECT *\n  FROM DPM_real_data\n  ORDER BY collection_time DESC\n  LIMIT 20;\n`;\nmsg.payload = [];\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 840,
+        "y": 260,
+        "wires": [
+            [
+                "api_dpm_mysql"
+            ]
+        ]
+    },
+    {
+        "id": "api_dpm_mysql",
+        "type": "mysql",
+        "z": "tab_api",
+        "mydb": "67064bb2d07a846a",
+        "name": "DPM_real_data MySQL Query",
+        "x": 510,
+        "y": 380,
+        "wires": [
+            [
+                "api_dpm_format"
+            ]
+        ]
+    },
+    {
+        "id": "api_dpm_format",
+        "type": "function",
+        "z": "tab_api",
+        "name": "Format Response",
+        "func": "msg.statusCode = 200;\nmsg.payload = {\n  ok: true,\n  rows: msg.payload,\n  count: Array.isArray(msg.payload) ? msg.payload.length : 0\n};\nreturn msg;",
+        "outputs": 1,
+        "x": 850,
+        "y": 380,
+        "wires": [
+            [
+                "api_dpm_resp"
+            ]
+        ]
+    },
+    {
+        "id": "api_dpm_resp",
+        "type": "http response",
+        "z": "tab_api",
+        "name": "HTTP Response",
+        "x": 1100,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "67064bb2d07a846a",
+        "type": "MySQLdatabase",
+        "name": "MODBUS数据存储",
+        "host": "192.168.19.171",
+        "port": "3306",
+        "db": "ems_database",
+        "tz": "+08:00",
+        "charset": "UTF8"
+    },
+    {
+        "id": "e1cf8c8270f92ac8",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-node-mysql": "2.0.0"
+        }
+    }
+]

@@ -1,117 +1,154 @@
 // src/router/permission-router.js
+
 import { asyncRouteCandidates } from './route-defs';
 import { hasPerm, isViewer } from '../utils/permission';
 
-function deepClone(obj) {
+function clone(obj) {
   return JSON.parse(JSON.stringify(obj));
 }
 
-function filterNodeByPerm(node, user) {
-  const perm = node?.meta?.perm;
-  if (perm && !hasPerm(user, perm)) return null;
-
-  if (Array.isArray(node.children) && node.children.length) {
-    const kids = node.children
-      .map(ch => filterNodeByPerm(ch, user))
-      .filter(Boolean);
-    node.children = kids;
-  }
-
-  // 如果是“目录节点”且孩子被过滤为空，则移除
-  if (Array.isArray(node.children) && node.children.length === 0 && !node.component) {
-    return null;
-  }
-
-  return node;
-}
-
+/**
+ * 预留：如果以后你想“按权限裁剪路由”，可以用它。
+ * 当前版本 Router 没用到它，但保留不删，避免以后要再写一遍。
+ */
 export function filterRoutesByUser(user) {
-  const userIsViewer = isViewer(user);
-  const routes = deepClone(asyncRouteCandidates);
+  const routes = clone(asyncRouteCandidates);
+  const viewer = isViewer(user);
 
-  const top = routes
+  return routes
     .filter(r => {
-      if (r.meta?.viewerOnly) return userIsViewer;
-      return !userIsViewer;
+      if (r.meta?.viewerOnly) return viewer;
+      return !viewer;
     })
-    .map(r => filterNodeByPerm(r, user))
-    .filter(Boolean);
-
-  return top;
+    .map(r => {
+      if (!r.children) return r;
+      r.children = r.children.filter(ch => {
+        const perm = ch.meta?.perm;
+        return perm ? hasPerm(user, perm) : true;
+      });
+      return r;
+    })
+    .filter(r => !r.children || r.children.length > 0);
 }
 
-// 由路由生成 AdminLTE 风格菜单（分组 + 树）
+/**
+ * 真正给 Sidebar 用的函数：
+ *   输入：user（含 permissions）
+ *   输出：[{ type:'header' }, { type:'item' }, { type:'tree', children:[...] }, ...]
+ */
 export function buildMenuForUser(user) {
-  const userIsViewer = isViewer(user);
+  // viewer：只走 /tv 全屏，不显示 Sidebar
+  if (isViewer(user)) return [];
 
-  // 先拿到“该用户可见”的路由（你已有 filterRoutesByUser）
-  const addedRoutes = filterRoutesByUser(user);
+  const perms = (user && user.permissions) || [];
 
-  // viewer 只走 /tv，不需要 sidebar 菜单
-  if (userIsViewer) return [];
+  const has = p => {
+    if (!p) return true;
+    return perms.includes('ems.admin') || perms.includes(p);
+  };
 
-  const app = addedRoutes.find(r => r.name === 'app');
-  if (!app || !Array.isArray(app.children)) return [];
+  const menus = [];
 
-  // ✅ 关键：忽略 hidden 的 children（比如 profile/password）
-  const visibleChildren = app.children.filter(ch => !ch.meta?.hidden);
+  // ========== MAIN NAVIGATION ==========
+  menus.push({ type: 'header', title: 'MAIN NAVIGATION' });
 
-  // 1) 把 children 转成“节点”
-  const nodes = visibleChildren.map(ch => ({
-    type: 'item',
-    name: ch.name,
-    path: `/app/${ch.path}`,
-    title: ch.meta?.title || ch.name,
-    icon: ch.meta?.icon || '',
-    group: ch.meta?.group || 'MAIN NAVIGATION',
-    children: Array.isArray(ch.children)
-      ? ch.children
-          .filter(g => !g.meta?.hidden) // 子菜单也支持 hidden
-          .map(g => ({
-            type: 'item',
-            name: g.name,
-            path: `/app/${ch.path}/${g.path}`,
-            title: g.meta?.title || g.name,
-            icon: g.meta?.icon || '',
-            group: g.meta?.group || (ch.meta?.group || 'MAIN NAVIGATION')
-          }))
-      : []
-  }));
-
-  // 2) 按 group 分组
-  const groups = {};
-  for (const n of nodes) {
-    if (!groups[n.group]) groups[n.group] = [];
-    groups[n.group].push(n);
+  // Dashboard
+  if (has('dashboard.view') || has('ems.read')) {
+    menus.push({
+      type: 'item',
+      name: 'app.dashboard',
+      path: '/app/dashboard',
+      title: 'Dashboard',
+      icon: 'DataLine'
+    });
   }
 
-  // 3) 输出分组结构：[{ type:'header', title }, ...items/tree]
-  const order = ['MAIN NAVIGATION', 'MANAGEMENT', 'REPORTS', 'SYSTEM'];
-  const out = [];
+  // EMS 树
+  if (has('ems.read') || has('ems.write')) {
+    const emsTree = {
+      type: 'tree',
+      title: 'EMS',
+      icon: 'Monitor',
+      children: []
+    };
 
-  order.forEach(gname => {
-    if (!groups[gname] || groups[gname].length === 0) return;
-    out.push({ type: 'header', title: gname });
-    out.push(
-      ...groups[gname].map(x => ({
-        ...x,
-        type: x.children.length ? 'tree' : 'item'
-      }))
-    );
-  });
+    emsTree.children.push({
+      type: 'item',
+      name: 'ems.realtime',
+      path: '/app/ems/realtime',
+      title: 'Real-time Data'
+    });
 
-  // 其他未知组最后追加
-  Object.keys(groups).forEach(gname => {
-    if (order.includes(gname)) return;
-    out.push({ type: 'header', title: gname });
-    out.push(
-      ...groups[gname].map(x => ({
-        ...x,
-        type: x.children.length ? 'tree' : 'item'
-      }))
-    );
-  });
+    emsTree.children.push({
+      type: 'item',
+      name: 'ems.history',
+      path: '/app/ems/history',
+      title: 'History Data'
+    });
 
-  return out;
+    emsTree.children.push({
+      type: 'item',
+      name: 'ems.config',
+      path: '/app/ems/config',
+      title: 'EMS Config'
+    });
+
+    menus.push(emsTree);
+  }
+
+  // ========== REPORTS ==========
+  if (has('report.export')) {
+    menus.push({ type: 'header', title: 'REPORTS' });
+
+    const reportsTree = {
+      type: 'tree',
+      title: 'Reports',
+      icon: 'Histogram',
+      children: []
+    };
+
+    reportsTree.children.push({
+      type: 'item',
+      name: 'reports.energy',
+      path: '/app/reports/energy',
+      title: 'Energy Reports'
+    });
+
+    reportsTree.children.push({
+      type: 'item',
+      name: 'reports.daily',
+      path: '/app/reports/daily',
+      title: 'Daily / Monthly'
+    });
+
+    menus.push(reportsTree);
+  }
+
+  // ========== MANAGEMENT ==========
+  if (has('user.manage')) {
+    menus.push({ type: 'header', title: 'MANAGEMENT' });
+
+    menus.push({
+      type: 'item',
+      name: 'app.users',
+      path: '/app/users',
+      title: 'User Management',
+      icon: 'Tools'
+    });
+  }
+
+  // ========== SYSTEM ==========
+  if (has('system.config')) {
+    menus.push({ type: 'header', title: 'SYSTEM' });
+
+    menus.push({
+      type: 'item',
+      name: 'app.settings',
+      path: '/app/settings',
+      title: 'System Config',
+      icon: 'Grid'
+    });
+  }
+
+  return menus;
 }
-

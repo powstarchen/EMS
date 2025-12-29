@@ -1,159 +1,186 @@
 // src/router/route-defs.js
 
-const Login = () => import('../views/login/index1.vue');
+// 视图组件（按你现在的结构，全部用相对路径）
+const Login = () => import('../views/login/index.vue');
+const Dashboard = () => import('../views/dashboard/index.vue');
+const Home = () => import('../views/home/index.vue');         
+const Reports = () => import('../views/reports/index.vue');
+const Users = () => import('../views/users/index.vue');
+const Settings = () => import('../views/system/index.vue');
 const NotFound = () => import('../views/404.vue');
 
-const Dashboard = () => import('../views/dashboard/index.vue');
+// ✅ 新增：EMS 子页面
+const emsRealtime = () => import('../views/ems/realTime.vue');
+const emsHistory = () => import('../views/ems/history.vue');
+const emsConfig = () => import('../views/ems/config.vue');
+
+// ✅ 新增：Reports 子页面
+const reportEnergy = () => import('../views/reports/energyReport.vue');
+const reportDaily = () => import('../views/reports/dailyReport.vue');
 
 // Layout
 const AppLayout = () => import('../views/layout/AppLayout.vue');
 const FullscreenLayout = () => import('../views/layout/FullscreenLayout.vue');
 
-// EMS pages
-const EMSRealtime = () => import('../views/ems/realtime.vue');
-const EMSHistory = () => import('../views/ems/history.vue');
-const EMSDevices = () => import('../views/ems/devices.vue');
+const changePassword = () => import('../views/profile/changePassword.vue');
+const userProfile = () => import('../views/profile/profile.vue');
 
-// Reports pages
-const ReportEnergy = () => import('../views/reports/energy.vue');
-const ReportExport = () => import('../views/reports/export.vue');
-
-// Management pages
-const Users = () => import('../views/users/index.vue');
-const Roles = () => import('../views/users/roles.vue');
-const Permissions = () => import('../views/users/permissions.vue');
-const ChangePassword = () => import('../views/profile/ChangePassword.vue');
-
-// System pages
-const SysConfig = () => import('../views/system/config.vue');
-const SysAudit = () => import('../views/system/audit.vue');
-
+// ===== 静态基础路由（Router 只用这一份）=====
 export const staticRoutes = [
   { path: '/', redirect: '/login' },
-  { path: '/login', name: 'login', component: Login },
-  { path: '/:pathMatch(.*)*', component: NotFound }
-];
 
-export const asyncRouteCandidates = [
+  {
+    path: '/login',
+    name: 'login',
+    component: Login
+  },
+
+  // App 区域（带 Sidebar + Header）
   {
     path: '/app',
     name: 'app',
     component: AppLayout,
     meta: { requiresAuth: true },
     children: [
-      // ===== MAIN NAVIGATION (single) =====
       {
         path: 'dashboard',
         name: 'app.dashboard',
         component: Dashboard,
-        meta: { title: 'Dashboard', icon: 'DataLine', perm: 'dashboard.view', group: 'MAIN NAVIGATION' }
+        meta: {
+          title: 'Dashboard',
+          icon: 'DataLine',
+          perm: 'dashboard.view',
+          group: 'MAIN NAVIGATION'
+        }
       },
 
-      // ===== EMS (tree) =====
+      // ===== EMS 主入口 =====
       {
         path: 'ems',
         name: 'app.ems',
-        meta: { title: 'EMS', icon: 'Monitor', perm: 'ems.read', group: 'MAIN NAVIGATION' },
-        children: [
-          {
-            path: 'realtime',
-            name: 'app.ems.realtime',
-            component: EMSRealtime,
-            meta: { title: 'Realtime', icon: 'DataLine', perm: 'ems.read', group: 'MAIN NAVIGATION' }
-          },
-          {
-            path: 'history',
-            name: 'app.ems.history',
-            component: EMSHistory,
-            meta: { title: 'History', icon: 'Histogram', perm: 'ems.read', group: 'MAIN NAVIGATION' }
-          },
-          {
-            path: 'devices',
-            name: 'app.ems.devices',
-            component: EMSDevices,
-            meta: { title: 'Devices', icon: 'Tools', perm: 'ems.read', group: 'MAIN NAVIGATION' }
-          },
-          {
-          path: 'profile/password',
-          name: 'app.profile.password',
-          component: ChangePassword,
-          meta: { title: 'Change Password', hidden: true }
+        component: Home,
+        meta: {
+          title: 'EMS Data',
+          icon: 'Monitor',
+          perm: 'ems.read',
+          group: 'MAIN NAVIGATION'
         }
-        ]
+      },
+      // EMS 子路由（目前都复用 Home，占位，将来可以换成专门页面）
+      {
+        path: 'ems/realtime',
+        name: 'app.ems.realtime',
+        component: emsRealtime,
+        meta: {
+          title: 'Real-time Data',
+          perm: 'ems.read',
+          group: 'MAIN NAVIGATION'
+        }
+      },
+      {
+        path: 'ems/history',
+        name: 'app.ems.history',
+        component: emsHistory,
+        meta: {
+          title: 'History Data',
+          perm: 'ems.read',
+          group: 'MAIN NAVIGATION'
+        }
+      },
+      {
+        path: 'ems/config',
+        name: 'app.ems.config',
+        component: emsConfig,
+        meta: {
+          title: 'EMS Config',
+          perm: 'ems.read',
+          group: 'MAIN NAVIGATION'
+        }
       },
 
-      // ===== REPORTS (tree) =====
+      // ===== Reports 主入口 =====
       {
         path: 'reports',
         name: 'app.reports',
-        meta: { title: 'Reports', icon: 'Histogram', perm: 'report.export', group: 'REPORTS' },
-        children: [
-          {
-            path: 'energy',
-            name: 'app.reports.energy',
-            component: ReportEnergy,
-            meta: { title: 'Energy Summary', icon: 'Histogram', perm: 'report.export', group: 'REPORTS' }
-          },
-          {
-            path: 'export',
-            name: 'app.reports.export',
-            component: ReportExport,
-            meta: { title: 'Export', icon: 'Tools', perm: 'report.export', group: 'REPORTS' }
-          }
-        ]
+        component: Reports,
+        meta: {
+          title: 'Reports',
+          icon: 'Histogram',
+          perm: 'report.export',
+          group: 'REPORTS'
+        }
+      },
+      // Reports 子路由（占位）
+      {
+        path: 'reports/energy',
+        name: 'app.reports.energy',
+        component: reportEnergy,
+        meta: {
+          title: 'Energy Reports',
+          perm: 'report.export',
+          group: 'REPORTS'
+        }
+      },
+      {
+        path: 'reports/daily',
+        name: 'app.reports.daily',
+        component: reportDaily,
+        meta: {
+          title: 'Daily / Monthly',
+          perm: 'report.export',
+          group: 'REPORTS'
+        }
       },
 
-      // ===== MANAGEMENT (tree) =====
+      // ===== User Management =====
       {
-        path: 'management',
-        name: 'app.management',
-        meta: { title: 'Management', icon: 'Tools', perm: 'user.manage', group: 'MANAGEMENT' },
-        children: [
-          {
-            path: 'users',
-            name: 'app.management.users',
-            component: Users,
-            meta: { title: 'Users', icon: 'Tools', perm: 'user.manage', group: 'MANAGEMENT' }
-          },
-          {
-            path: 'roles',
-            name: 'app.management.roles',
-            component: Roles,
-            meta: { title: 'Roles', icon: 'Grid', perm: 'user.manage', group: 'MANAGEMENT' }
-          },
-          {
-            path: 'permissions',
-            name: 'app.management.permissions',
-            component: Permissions,
-            meta: { title: 'Permissions', icon: 'Grid', perm: 'user.manage', group: 'MANAGEMENT' }
-          }
-        ]
+        path: 'users',
+        name: 'app.users',
+        component: Users,
+        meta: {
+          title: 'User Mgmt',
+          icon: 'Tools',
+          perm: 'user.manage',
+          group: 'MANAGEMENT'
+        }
       },
 
-      // ===== SYSTEM (tree) =====
+      // ===== System Config =====
       {
-        path: 'system',
-        name: 'app.system',
-        meta: { title: 'System', icon: 'Grid', perm: 'system.config', group: 'SYSTEM' },
-        children: [
-          {
-            path: 'config',
-            name: 'app.system.config',
-            component: SysConfig,
-            meta: { title: 'Config', icon: 'Grid', perm: 'system.config', group: 'SYSTEM' }
-          },
-          {
-            path: 'audit',
-            name: 'app.system.audit',
-            component: SysAudit,
-            meta: { title: 'Audit Log', icon: 'Histogram', perm: 'system.config', group: 'SYSTEM' }
-          }
-        ]
+        path: 'settings',
+        name: 'app.settings',
+        component: Settings,
+        meta: {
+          title: 'System Config',
+          icon: 'Grid',
+          perm: 'system.config',
+          group: 'SYSTEM'
+        }
+      },
+
+      // ===== Change Password & Profile（从 Header 下拉进入，不在 Sidebar 显示）=====
+      {
+        path: 'account/password',
+        name: 'app.account.password',
+        component: changePassword, 
+        meta: {
+          title: 'Change Password',
+          hidden: true
+        }
+      },
+      {
+        path: 'account/profile',
+        name: 'app.account.profile',
+        component: userProfile, 
+        meta: {
+          title: 'User Profile',
+          hidden: true
+        }
       }
     ]
   },
 
-  // viewer / TV
+  // TV 全屏模式（viewer 专用）
   {
     path: '/tv',
     name: 'tv',
@@ -164,8 +191,23 @@ export const asyncRouteCandidates = [
         path: 'dashboard',
         name: 'tv.dashboard',
         component: Dashboard,
-        meta: { title: 'TV Dashboard', perm: 'dashboard.view' }
+        meta: {
+          title: 'TV Dashboard',
+          perm: 'dashboard.view'
+        }
       }
     ]
+  },
+
+  // 404
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'notfound',
+    component: NotFound
   }
 ];
+
+// ===== 可选：保留 asyncRouteCandidates 给 filterRoutesByUser 用（未来可能用得到）=====
+export const asyncRouteCandidates = staticRoutes.filter(r =>
+  ['/app', '/tv'].includes(r.path)
+);

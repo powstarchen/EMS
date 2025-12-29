@@ -1,27 +1,30 @@
 <template>
   <div class="page">
     <div class="page-header">
-      <h2>EMS 历史数据</h2>
-      <p class="desc">按时间维度查看用电趋势，将来支持导出报表。</p>
+      <h2>能耗报表</h2>
+      <p class="desc">按区域 / 设备统计电量，用于能源分析及节能评估。</p>
     </div>
 
     <div class="card">
       <div class="filter-row">
         <div>
-          <label>时间范围（占位）</label>
+          <label>统计周期（占位）</label>
           <div class="filter-controls">
-            <input type="date" />
-            <span class="sep">~</span>
-            <input type="date" />
+            <select>
+              <option>按日</option>
+              <option>按月</option>
+              <option>按年</option>
+            </select>
           </div>
         </div>
         <div>
           <button class="btn">查询</button>
+          <button class="btn-outline">导出</button>
         </div>
       </div>
 
       <div class="chart-placeholder">
-        将来这里放折线图 / 柱状图（kWh 日 / 月趋势），数据来自 MySQL 聚合视图。
+        将来这里放分区堆叠柱状图 / 饼图等，可直接从 MySQL 聚合视图 + Node-RED API 获取。
       </div>
     </div>
   </div>
@@ -36,69 +39,65 @@
   flex-direction: column;
   gap: 16px;
 }
-
 .page-header h2 {
   margin: 0;
   font-size: 20px;
   font-weight: 600;
 }
-
 .page-header .desc {
   margin-top: 4px;
   color: #6c757d;
   font-size: 13px;
 }
-
 .card {
   background: #fff;
   border-radius: 4px;
   padding: 16px;
   box-shadow: 0 1px 2px rgba(0,0,0,.05);
 }
-
 .filter-row {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
   margin-bottom: 16px;
 }
-
 label {
   font-size: 13px;
   color: #495057;
 }
-
 .filter-controls {
   margin-top: 6px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
 }
-
-.filter-controls input[type="date"] {
+select {
   padding: 4px 8px;
-  border: 1px solid #dee2e6;
   border-radius: 4px;
+  border: 1px solid #dee2e6;
   font-size: 13px;
 }
-
-.sep {
-  color: #adb5bd;
-}
-
-.btn {
+.btn,
+.btn-outline {
   padding: 6px 12px;
   border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  margin-left: 8px;
+}
+.btn {
   border: 1px solid #0d6efd;
   background: #0d6efd;
   color: #fff;
-  cursor: pointer;
-  font-size: 13px;
 }
 .btn:hover {
   background: #0b5ed7;
 }
-
+.btn-outline {
+  border: 1px solid #6c757d;
+  background: #fff;
+  color: #343a40;
+}
+.btn-outline:hover {
+  background: #f1f3f5;
+}
 .chart-placeholder {
   border: 1px dashed #dee2e6;
   border-radius: 4px;

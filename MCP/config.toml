@@ -1,0 +1,29 @@
+mcp:
+  version: v1
+servers:
+  nodered-api:
+    type: http
+    baseUrl: https://nodered.powstar.top
+    auth:
+      type: bearer
+      token: ${EMS_API_TOKEN}  # 登录后获得的 access_token
+    resources:
+      - name: dpm-latest
+        method: GET
+        path: /api/ems/dpm/latest
+      - name: test-auth
+        method: GET
+        path: /api/test
+  ems-mysql:
+    type: mysql
+    host: 192.168.19.171
+    port: 3306
+    user: ${EMS_DB_USER}
+    password: ${EMS_DB_PASS}
+    database: ems_database
+    tls: false  # 若有 TLS 改为 true 并配置证书
+clients:
+  - name: ems-frontend
+    env:
+      VITE_API_BASE: https://nodered.powstar.top
+      VITE_APP_NAME: EMS
