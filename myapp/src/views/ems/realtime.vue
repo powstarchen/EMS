@@ -1,135 +1,142 @@
+<script setup>
+import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { emsApi } from '../../api';
+
+const loading = ref(false);
+const rows = ref([]);
+const error = ref('');
+
+let timer = null;
+
+async function fetchData() {
+  loading.value = true;
+  error.value = '';
+
+  try {
+    const res = await emsApi.getRealtime();
+    // Node-RED 返回 { success, count, rows }
+    rows.value = Array.isArray(res.rows) ? res.rows : [];
+  } catch (e) {
+    console.error('fetch realtime error:', e);
+    error.value = e?.message || 'Failed to load realtime data';
+  } finally {
+    loading.value = false;
+  }
+}
+
+onMounted(() => {
+  fetchData();
+  // 每 10 秒刷新一次
+  timer = setInterval(fetchData, 10000);
+});
+
+onBeforeUnmount(() => {
+  if (timer) clearInterval(timer);
+});
+
+function formatSgTime(value) {
+  if (!value) return '';
+
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) {
+    // 解析失败就原样返回，避免整行报错
+    return value;
+  }
+
+  // 统一格式化为新加坡时间
+  return d.toLocaleString('en-SG', {
+    timeZone: 'Asia/Singapore',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+}
+</script>
+
 <template>
-  <div class="page">
-    <!-- 标题区 -->
-    <div class="page-header">
-      <h2>EMS 实时数据</h2>
-      <p class="desc">这里展示主要配电回路 / 设备的实时功率、电压、电流等关键指标。</p>
-    </div>
-
-    <!-- 指标卡片 -->
-    <div class="card-row">
-      <div class="card kpi">
-        <div class="kpi-label">当前总有功功率</div>
-        <div class="kpi-value">-- kW</div>
-        <div class="kpi-sub">数据来源：Node-RED 实时采集</div>
-      </div>
-      <div class="card kpi">
-        <div class="kpi-label">今日累计电量</div>
-        <div class="kpi-value">-- kWh</div>
-        <div class="kpi-sub">与昨日同比：--%</div>
-      </div>
-      <div class="card kpi">
-        <div class="kpi-label">当前功率因数</div>
-        <div class="kpi-value">--</div>
-        <div class="kpi-sub">目标 ≥ 0.95</div>
-      </div>
-    </div>
-
-    <!-- 图表 + 列表区 -->
-    <div class="content-row">
-      <div class="card chart-card">
-        <h3 class="card-title">关键回路实时负载（占位图）</h3>
-        <div class="chart-placeholder">
-          这里将来放折线图（例如 A 相 / B 相 / C 相功率）
+  <div class="ems-realtime">
+    <el-card shadow="never" class="card">
+      <div class="card-header">
+        <div class="title">DPM Real-time Data</div>
+        <div class="actions">
+          <el-button size="small" @click="fetchData" :loading="loading">
+            Refresh
+          </el-button>
         </div>
       </div>
 
-      <div class="card table-card">
-        <h3 class="card-title">主要回路列表（占位表格）</h3>
-        <div class="table-placeholder">
-          将来从 Node-RED / MySQL 获取 DPM_real_data 当前值，按回路列表展示。
-        </div>
-      </div>
-    </div>
+      <el-alert
+        v-if="error"
+        type="error"
+        :closable="false"
+        class="mb-8"
+        :title="error"
+      />
+
+      <el-table
+        v-loading="loading"
+        :data="rows"
+        height="calc(100vh - 180px)"
+        size="small"
+        border
+      >
+        <el-table-column prop="device_id" label="ID" width="70" />
+        <el-table-column prop="device_name" label="Device" width="200" />
+        <el-table-column label="Time" width="200">
+          <template #default="{ row }">
+            {{ formatSgTime(row.collection_time) }}
+          </template>
+        </el-table-column>
+
+        <!-- 下面列名要和你的 DPM_real_data 字段一致 -->
+        <el-table-column prop="active_power_total" label="P (kW)" width="110" />
+        <el-table-column prop="voltage_ab" label="U12 (V)" width="110" />
+        <el-table-column prop="voltage_bc" label="U23 (V)" width="110" />
+        <el-table-column prop="voltage_ca" label="U31 (V)" width="110" />
+        <el-table-column prop="current_a" label="I1 (A)" width="110" />
+        <el-table-column prop="current_b" label="I2 (A)" width="110" />
+        <el-table-column prop="current_c" label="I3 (A)" width="110" />
+        <el-table-column prop="power_factor_total" label="PF" width="90" />
+
+        <el-table-column prop="collection_status" label="Status" width="100" />
+      </el-table>
+    </el-card>
   </div>
 </template>
 
-<script setup>
-// 目前先不接 API，稳住路由和布局
-// 后面我们会在这里引入 emsApi.getRealTime(...) 等
-</script>
-
 <style scoped>
-.page {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.page-header h2 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.page-header .desc {
-  margin-top: 4px;
-  color: #6c757d;
-  font-size: 13px;
-}
-
-/* KPI 卡片行 */
-.card-row {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+.ems-realtime {
+  height: 100%;
 }
 
 .card {
-  background: #fff;
-  border-radius: 4px;
-  padding: 16px;
-  box-shadow: 0 1px 2px rgba(0,0,0,.05);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
-.kpi-label {
-  font-size: 13px;
-  color: #6c757d;
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
 }
 
-.kpi-value {
-  margin-top: 8px;
-  font-size: 24px;
-  font-weight: 700;
-  color: #343a40;
-}
-
-.kpi-sub {
-  margin-top: 4px;
-  font-size: 12px;
-  color: #adb5bd;
-}
-
-/* 内容区：左图右表 */
-.content-row {
-  display: grid;
-  grid-template-columns: 2fr 1.5fr;
-  gap: 16px;
-}
-
-.card-title {
-  margin: 0 0 8px;
-  font-size: 15px;
+.title {
   font-weight: 600;
+  font-size: 16px;
 }
 
-.chart-placeholder,
-.table-placeholder {
-  border: 1px dashed #dee2e6;
-  border-radius: 4px;
-  padding: 20px;
-  font-size: 13px;
-  color: #6c757d;
-  text-align: center;
+.actions {
+  display: flex;
+  gap: 8px;
 }
 
-/* 小屏时改为一列 */
-@media (max-width: 992px) {
-  .card-row {
-    grid-template-columns: 1fr;
-  }
-  .content-row {
-    grid-template-columns: 1fr;
-  }
+.mb-8 {
+  margin-bottom: 8px;
 }
 </style>
