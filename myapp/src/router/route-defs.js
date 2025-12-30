@@ -10,7 +10,7 @@ const Settings = () => import('../views/system/index.vue');
 const NotFound = () => import('../views/404.vue');
 
 // ✅ 新增：EMS 子页面
-const emsRealtime = () => import('../views/ems/realTime.vue');
+const emsRealtime = () => import('../views/ems/realtime.vue');
 const emsHistory = () => import('../views/ems/history.vue');
 const emsConfig = () => import('../views/ems/config.vue');
 
